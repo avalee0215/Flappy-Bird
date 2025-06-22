@@ -1,0 +1,20 @@
+Fitter Status : Successful - Fri May 30 11:55:55 2025
+Quartus Prime Version : 18.1.0 Build 625 09/12/2018 SJ Lite Edition
+Revision Name : Mini_Project_2025
+Top-level Entity Name : Game_Control
+Family : Cyclone V
+Device : 5CEBA4F23C7
+Timing Models : Final
+Logic utilization (in ALMs) : 2,911 / 18,480 ( 16 % )
+Total registers : 528
+Total pins : 21 / 224 ( 9 % )
+Total virtual pins : 0
+Total block memory bits : 406,528 / 3,153,920 ( 13 % )
+Total RAM Blocks : 53 / 308 ( 17 % )
+Total DSP Blocks : 0 / 66 ( 0 % )
+Total HSSI RX PCSs : 0
+Total HSSI PMA RX Deserializers : 0
+Total HSSI TX PCSs : 0
+Total HSSI PMA TX Serializers : 0
+Total PLLs : 1 / 4 ( 25 % )
+Total DLLs : 0 / 4 ( 0 % )

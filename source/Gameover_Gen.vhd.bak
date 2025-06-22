@@ -1,0 +1,160 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.STD_LOGIC_ARITH.ALL;
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
+
+entity Gameover_Gen is
+    port (
+		  mode_sel : in std_logic;
+        pixel_row, pixel_column : in std_logic_vector(9 downto 0);
+        character_address : out std_logic_vector(5 downto 0);
+        font_row, font_column : out std_logic_vector(2 downto 0)
+    );
+end entity;
+
+architecture behaviour of Gameover_Gen is
+
+	constant CHAR_COUNT : integer := 23;
+
+    type pos_array is array (0 to CHAR_COUNT-1) of std_logic_vector(9 downto 0);
+    type addr_array is array (0 to CHAR_COUNT-1) of std_logic_vector(5 downto 0);
+	 type size_array is array (0 to CHAR_COUNT-1) of std_logic_vector(9 downto 0);
+	 
+    signal char_x_pos, char_y_pos : pos_array;
+    signal first_row, first_col : pos_array;
+	 signal char_size : size_array;
+    signal char_rom_addr : std_logic_vector(5 downto 0);
+
+    constant char_rom : addr_array := (
+        0 => "000110",  -- F 
+        1 => "001100",  -- L
+        2 => "000001",  -- A
+        3 => "010000",  -- P 
+        4 => "010000",  -- P 
+        5 => "011001",  -- Y 
+        6 => "010000",  -- P
+        7 => "001111",  -- O 
+        8 => "001111",  -- O 
+        9 => "010000",  -- P 
+		  10 => "000111", -- G
+		  11 => "000001", -- A
+		  12 => "001101", -- M
+		  13 => "000101", -- E
+		  14 => "010100", -- T
+		  15 => "010010", -- R
+		  16 => "000001", -- A
+		  17 => "001001", -- I
+		  18 => "001110", -- N
+		  19 => "001001", -- I
+		  20 => "001110", -- N
+		  21 => "000111", -- G
+		  22 => "011111" -- <--
+		  );
+
+begin
+
+    char_size(0 to 9)  <= (others => CONV_STD_LOGIC_VECTOR(32, 10));
+    char_size(10 to 22) <= (others => CONV_STD_LOGIC_VECTOR(16, 10));
+	 
+	 
+    char_x_pos(0) <= CONV_STD_LOGIC_VECTOR(32, 10);   -- F
+    char_y_pos(0) <= CONV_STD_LOGIC_VECTOR(150, 10);
+
+    char_x_pos(1) <= CONV_STD_LOGIC_VECTOR(88, 10);   -- L
+    char_y_pos(1) <= CONV_STD_LOGIC_VECTOR(150, 10);
+
+    char_x_pos(2) <= CONV_STD_LOGIC_VECTOR(146, 10);  -- A
+    char_y_pos(2) <= CONV_STD_LOGIC_VECTOR(150, 10);
+
+    char_x_pos(3) <= CONV_STD_LOGIC_VECTOR(204, 10);  -- P
+    char_y_pos(3) <= CONV_STD_LOGIC_VECTOR(150, 10);
+
+    char_x_pos(4) <= CONV_STD_LOGIC_VECTOR(262, 10);  -- P
+    char_y_pos(4) <= CONV_STD_LOGIC_VECTOR(150, 10);
+
+    char_x_pos(5) <= CONV_STD_LOGIC_VECTOR(320, 10);  -- Y
+    char_y_pos(5) <= CONV_STD_LOGIC_VECTOR(150, 10);
+
+    char_x_pos(6) <= CONV_STD_LOGIC_VECTOR(416, 10);  -- P
+    char_y_pos(6) <= CONV_STD_LOGIC_VECTOR(150, 10);
+
+    char_x_pos(7) <= CONV_STD_LOGIC_VECTOR(474, 10);  -- O
+    char_y_pos(7) <= CONV_STD_LOGIC_VECTOR(150, 10);
+
+    char_x_pos(8) <= CONV_STD_LOGIC_VECTOR(532, 10);  -- O
+    char_y_pos(8) <= CONV_STD_LOGIC_VECTOR(150, 10);
+
+    char_x_pos(9) <= CONV_STD_LOGIC_VECTOR(590, 10);  -- P
+    char_y_pos(9) <= CONV_STD_LOGIC_VECTOR(150, 10);
+
+	 
+    char_x_pos(10) <= CONV_STD_LOGIC_VECTOR(352, 10);  -- G
+    char_y_pos(10) <= CONV_STD_LOGIC_VECTOR(320, 10);
+	 
+	 char_x_pos(11) <= CONV_STD_LOGIC_VECTOR(382, 10);  -- A
+    char_y_pos(11) <= CONV_STD_LOGIC_VECTOR(320, 10);
+	 
+	 char_x_pos(12) <= CONV_STD_LOGIC_VECTOR(412, 10);  -- M
+    char_y_pos(12) <= CONV_STD_LOGIC_VECTOR(320, 10);
+	 
+	 char_x_pos(13) <= CONV_STD_LOGIC_VECTOR(442, 10);  -- E
+    char_y_pos(13) <= CONV_STD_LOGIC_VECTOR(320, 10);
+	 
+	 char_x_pos(14) <= CONV_STD_LOGIC_VECTOR(232, 10);  -- T
+    char_y_pos(14) <= CONV_STD_LOGIC_VECTOR(380, 10);
+	 
+	 char_x_pos(15) <= CONV_STD_LOGIC_VECTOR(262, 10);  -- R
+    char_y_pos(15) <= CONV_STD_LOGIC_VECTOR(380, 10);
+	 
+	 char_x_pos(16) <= CONV_STD_LOGIC_VECTOR(292, 10);  -- A
+    char_y_pos(16) <= CONV_STD_LOGIC_VECTOR(380, 10);
+	 
+	 char_x_pos(17) <= CONV_STD_LOGIC_VECTOR(322, 10);  -- I
+    char_y_pos(17) <= CONV_STD_LOGIC_VECTOR(380, 10);
+
+	 char_x_pos(18) <= CONV_STD_LOGIC_VECTOR(352, 10);  -- N
+    char_y_pos(18) <= CONV_STD_LOGIC_VECTOR(380, 10);
+	 
+	 char_x_pos(19) <= CONV_STD_LOGIC_VECTOR(382, 10);  -- I
+    char_y_pos(19) <= CONV_STD_LOGIC_VECTOR(380, 10);
+	 
+	 char_x_pos(20) <= CONV_STD_LOGIC_VECTOR(412, 10);  -- N
+    char_y_pos(20) <= CONV_STD_LOGIC_VECTOR(380, 10);
+	 
+	 char_x_pos(21) <= CONV_STD_LOGIC_VECTOR(442, 10);  -- G
+    char_y_pos(21) <= CONV_STD_LOGIC_VECTOR(380, 10);
+	 
+	 char_x_pos(22) <= CONV_STD_LOGIC_VECTOR(487, 10);  -- <--
+    char_y_pos(22) <= CONV_STD_LOGIC_VECTOR(320, 10) when (mode_sel = '1') else
+							 CONV_STD_LOGIC_VECTOR(380, 10);
+	 
+    process(pixel_row, pixel_column, mode_sel)
+    begin
+        character_address <= "000000";
+        font_row  <= "000";
+        font_column <= "000";
+
+        for i in 0 to CHAR_COUNT-1 loop
+        if ((('0' & char_x_pos(i) <= pixel_column + char_size(i)) and
+             ('0' & pixel_column < char_x_pos(i) + char_size(i)) and
+             ('0' & char_y_pos(i) <= pixel_row + char_size(i)) and
+             ('0' & pixel_row < char_y_pos(i) + char_size(i)))) then
+
+            first_row(i) <= pixel_row - char_y_pos(i) + char_size(i);
+            first_col(i) <= pixel_column - char_x_pos(i) + char_size(i);
+
+            character_address <= char_rom(i);
+            if (i < 10) then
+                font_row    <= first_row(i)(5 downto 3);
+                font_column <= first_col(i)(5 downto 3);
+            else
+                font_row    <= first_row(i)(4 downto 2);
+                font_column <= first_col(i)(4 downto 2);
+            end if;
+
+            exit;
+        end if;
+    end loop;
+    end process;
+
+end architecture;

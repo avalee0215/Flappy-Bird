@@ -1,0 +1,33 @@
+
+State Machine - |Game_Control|display_state_for_pipes
+Name display_state_for_pipes.gameover display_state_for_pipes.game display_state_for_pipes.title 
+display_state_for_pipes.title 0 0 0 
+display_state_for_pipes.game 0 1 1 
+display_state_for_pipes.gameover 1 0 1 
+
+State Machine - |Game_Control|state_temp
+Name state_temp.gameover state_temp.game state_temp.title 
+state_temp.title 0 0 0 
+state_temp.game 0 1 1 
+state_temp.gameover 1 0 1 
+
+State Machine - |Game_Control|Collision_detect:U_CollisionDetect|collision
+Name collision.gift~reg0 collision.pipe~reg0 collision.none~reg0 
+collision.none~reg0 0 0 0 
+collision.pipe~reg0 0 1 1 
+collision.gift~reg0 1 0 1 
+
+State Machine - |Game_Control|Collision_detect:U_CollisionDetect|collision_result_var
+Name collision_result_var.gift collision_result_var.pipe collision_result_var.none 
+collision_result_var.none 0 0 0 
+collision_result_var.pipe 0 1 1 
+collision_result_var.gift 1 0 1 
+
+State Machine - |Game_Control|MOUSE:Mouse_Control|mouse_state
+Name mouse_state.INPUT_PACKETS mouse_state.WAIT_CMD_ACK mouse_state.WAIT_OUTPUT_READY mouse_state.LOAD_COMMAND2 mouse_state.LOAD_COMMAND mouse_state.INHIBIT_TRANS 
+mouse_state.INHIBIT_TRANS 0 0 0 0 0 0 
+mouse_state.LOAD_COMMAND 0 0 0 0 1 1 
+mouse_state.LOAD_COMMAND2 0 0 0 1 0 1 
+mouse_state.WAIT_OUTPUT_READY 0 0 1 0 0 1 
+mouse_state.WAIT_CMD_ACK 0 1 0 0 0 1 
+mouse_state.INPUT_PACKETS 1 0 0 0 0 1 

@@ -1,0 +1,71 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+use work.util.all;
+
+entity Life_Gen is
+    port (
+        pixel_row     : in std_logic_vector(9 downto 0);
+        pixel_column  : in std_logic_vector(9 downto 0);
+        life_count    : in integer range 0 to 3;
+        character_address : out std_logic_vector(5 downto 0);
+        font_row          : out std_logic_vector(2 downto 0);
+        font_column       : out std_logic_vector(2 downto 0)
+    );
+end entity Life_Gen;
+
+architecture behaviour of Life_Gen is
+    constant CHAR_WIDTH_PIXELS  : integer := 32;
+    constant CHAR_HEIGHT_PIXELS : integer := 32;
+
+    constant CHAR_WIDTH_SLV  : std_logic_vector(9 downto 0) := std_logic_vector(to_unsigned(CHAR_WIDTH_PIXELS, 10));
+    constant CHAR_HEIGHT_SLV : std_logic_vector(9 downto 0) := std_logic_vector(to_unsigned(CHAR_HEIGHT_PIXELS, 10));
+
+    constant char_x_pos : std_logic_vector(9 downto 0) := std_logic_vector(to_unsigned(20, 10)); -- Tens digit X position
+        
+    constant char_y_pos : std_logic_vector(9 downto 0) := std_logic_vector(to_unsigned(20, 10));
+
+    signal first_row, first_col : std_logic_vector(9 downto 0); -- Temp signals for calculation
+
+begin
+
+    process(pixel_row, pixel_column, life_count)
+        variable row_int, col_int : integer;
+        variable char_x_int, char_y_int : integer;
+        variable current_digit : integer := 0;
+    begin
+        character_address <= (others => '0');
+        font_row          <= (others => '0');
+        font_column       <= (others => '0');
+
+        row_int := to_integer(unsigned(pixel_row));
+        col_int := to_integer(unsigned(pixel_column));
+
+            char_x_int := to_integer(unsigned(char_x_pos));
+            char_y_int := to_integer(unsigned(char_y_pos));
+
+            if (col_int >= char_x_int and col_int < (char_x_int + CHAR_WIDTH_PIXELS) and
+                row_int >= char_y_int and row_int < (char_y_int + CHAR_HEIGHT_PIXELS)) then
+					 
+                current_digit := life_count;
+					 
+					case current_digit is
+						when 0 => character_address <= "110000";
+						when 1 => character_address <= "110001";
+						when 2 => character_address <= "110010";
+						when 3 => character_address <= "110011";
+						when others => character_address <= "000000";
+				   end case;
+					 
+                first_row <= std_logic_vector(to_unsigned(row_int - char_y_int, 10));
+                first_col <= std_logic_vector(to_unsigned(col_int - char_x_int, 10));
+
+                font_row    <= std_logic_vector(to_unsigned(row_int - char_y_int, 3)); -- Corrected for 3 bits (0-7), or 4 bits (0-15) if 16x16 font
+                font_column <= std_logic_vector(to_unsigned(col_int - char_x_int, 3)); -- Corrected for 3 bits (0-7), or 4 bits (0-15) if 16x16 font
+
+                font_row    <= first_row(4 downto 2); -- Keep your original slicing for now
+                font_column <= first_col(4 downto 2); -- Keep your original slicing for now
+            end if;
+    end process;
+end architecture behaviour;

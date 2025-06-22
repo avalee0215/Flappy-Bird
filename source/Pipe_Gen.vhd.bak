@@ -1,0 +1,28 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_unsigned.all;
+use ieee.numeric_std.all;
+
+entity Pipe_Gen is
+	port (state : in game_state;
+			clk : in std_logic;
+			pipe_pos : out pipe_pos_arr_type;
+			rand_num : in std_logic_vector(7 downto 0);
+			moving : in integer;
+	);
+end entity;
+
+architecture behaviour of Pipe_Gen is 
+
+	signal current_pipe : pipe_pos_arr_type;
+	signal init_pipe : std_logic := '1';
+	
+begin
+	process(clk)
+		variable new_pipe_x, new_pipe_y : integer;
+		variable pipe_pos : pipe_pos_type;
+		variable rand : integer;
+		
+	begin
+		if (rising_edge(clk)) then
+			rand := to_integer(unsigned(rng(7 downto 0))) + 100;

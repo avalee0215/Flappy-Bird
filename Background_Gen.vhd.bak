@@ -1,0 +1,110 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use work.sprites_pkg.all;  -- sprites_pkg.vhd 꼭 포함할 것!
+
+entity Background_Gen is
+    port (
+        CLOCK_50 : in std_logic;
+        VGA_R    : out std_logic_vector(3 downto 0);
+        VGA_G    : out std_logic_vector(3 downto 0);
+        VGA_B    : out std_logic_vector(3 downto 0);
+        VGA_HS   : out std_logic;
+        VGA_VS   : out std_logic
+    );
+end entity;
+
+architecture rtl of Background_Gen is
+
+    signal clk_25MHz : std_logic := '0';
+    signal row, col  : std_logic_vector(9 downto 0);
+    signal red_en, green_en, blue_en : std_logic;
+
+    signal rom_addr  : std_logic_vector(14 downto 0);  -- 15-bit 주소로 충분 (160*120 = 19200)
+    signal rom_q     : std_logic_vector(11 downto 0);  -- 12-bit RGB444
+
+    component vga_sync
+        port (
+            clock_25Mhz : in std_logic;
+            red, green, blue : in std_logic;
+            red_out, green_out, blue_out : out std_logic;
+            horiz_sync_out, vert_sync_out : out std_logic;
+            pixel_row, pixel_column : out std_logic_vector(9 downto 0)
+        );
+    end component;
+
+    component altsyncram
+        generic (
+            width_a     : integer := 12;
+            widthad_a   : integer := 15;
+            numwords_a  : integer := 32768;
+            lpm_type    : string := "altsyncram";
+            operation_mode : string := "ROM";
+            init_file   : string := "components/sprites.mif"
+        );
+        port (
+            clock0      : in std_logic;
+            address_a   : in std_logic_vector(14 downto 0);
+            q_a         : out std_logic_vector(11 downto 0)
+        );
+    end component;
+
+begin
+
+    -- 25MHz clock divider
+    process (CLOCK_50)
+    begin
+        if rising_edge(CLOCK_50) then
+            clk_25MHz <= not clk_25MHz;
+        end if;
+    end process;
+
+    -- VGA timing
+    vga: vga_sync
+        port map (
+            clock_25Mhz => clk_25MHz,
+            red => '1', green => '1', blue => '1',
+            red_out => red_en, green_out => green_en, blue_out => blue_en,
+            horiz_sync_out => VGA_HS, vert_sync_out => VGA_VS,
+            pixel_row => row, pixel_column => col
+        );
+
+    -- ROM
+    rom: altsyncram
+        port map (
+            clock0 => clk_25MHz,
+            address_a => rom_addr,
+            q_a => rom_q
+        );
+
+    -- Rendering logic
+    process (clk_25MHz)
+        variable x, y : integer;
+        variable dX, dY : integer;
+    begin
+        if rising_edge(clk_25MHz) then
+            x := to_integer(unsigned(col));
+            y := to_integer(unsigned(row));
+
+            if x < SPRITE_BG_WIDTH * 4 and y < SPRITE_BG_HEIGHT * 4 then
+                dX := x / 4;
+                dY := y / 4;
+                rom_addr <= std_logic_vector(to_unsigned(
+                    SPRITE_BG_OFFSET + dY * SPRITE_BG_WIDTH + dX,
+                    15
+                ));
+            else
+                rom_addr <= (others => '0');
+            end if;
+        end if;
+    end process;
+
+    -- VGA Output
+    VGA_R <= rom_q(11 downto 8) when red_en = '1' else "0000";
+    VGA_G <= rom_q(7 downto 4)  when green_en = '1' else "0000";
+    VGA_B <= rom_q(3 downto 0)  when blue_en = '1' else "0000";
+
+end architecture;
+
+
+

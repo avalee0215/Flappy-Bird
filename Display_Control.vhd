@@ -1,0 +1,347 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_unsigned.all;
+use ieee.numeric_std.all;
+
+use work.sprites_pkg.all;
+use work.util.all;
+
+entity Display_Control is
+    port (
+        clock_25Mhz : in std_logic;
+        clock_60hz  : in std_logic;
+        rand_num    : in std_logic_vector(7 downto 0);
+        state       : in game_state;
+        pixel_row   : in std_logic_vector(9 downto 0);
+        pixel_column: in std_logic_vector(9 downto 0);
+        mode_sel    : in std_logic;
+		  score       : in integer;
+		  left_button : in std_logic;
+		  life_count  : in integer;
+        move_speed_in : in integer range 0 to 10; -- New port to receive speed from Game_Control
+        VGA_R       : out std_logic_vector(3 downto 0);
+        VGA_G       : out std_logic_vector(3 downto 0);
+        VGA_B       : out std_logic_vector(3 downto 0);
+		  pipe_passed : out integer;
+		  pipe_pos    : out pipe_pos_arr_type;
+		  collision_type   : out collision_type
+		  
+    );
+end entity;
+
+architecture behaviour of Display_Control is
+
+    signal current_pixel : std_logic_vector(11 downto 0);
+    signal pipe_on_temp  : std_logic;
+	 signal background_on : std_logic;
+	 signal player_on     : std_logic;
+	 signal gift_on       : std_logic := '0';
+	 
+	 signal background_r  : std_logic_vector(3 downto 0);
+	 signal background_g  : std_logic_vector(3 downto 0);
+	 signal background_b  : std_logic_vector(3 downto 0);
+
+    signal red_en, green_en, blue_en : std_logic;
+    signal mode_sel_temp : std_logic;
+
+    signal character_address : std_logic_vector(5 downto 0);
+    signal font_row, font_column : std_logic_vector(2 downto 0);
+    signal rom_mux_output : std_logic;
+	 
+	 signal character_address2 : std_logic_vector(5 downto 0);
+    signal font_row2, font_column2 : std_logic_vector(2 downto 0);
+    signal rom_mux_output2 : std_logic;
+	 
+	 signal character_address3 : std_logic_vector(5 downto 0);
+    signal font_row3, font_column3 : std_logic_vector(2 downto 0);
+    signal rom_mux_output3 : std_logic;
+	 	 	 
+	 signal key0 : std_logic := '0';
+	 signal player_pos : bird_pos_type;
+	 
+    -- Component declaration for Pipe_Gen (MUST match Pipe_Gen's entity)
+    component Pipe_Gen is
+        port (
+            state        : in  game_state;
+            clock_60hz   : in  std_logic;
+            rand_num     : in  std_logic_vector(7 downto 0);
+            pixel_row    : in  std_logic_vector(9 downto 0);
+            pixel_column : in  std_logic_vector(9 downto 0);
+            move_pixel   : in  integer; -- Added this port to the component declaration
+            pipe_on      : out std_logic;
+				pipe_pass    : out integer;
+				pipe_pos     : out pipe_pos_arr_type
+        );
+    end component;
+
+    component char_rom is
+        port (
+            character_address : in std_logic_vector(5 downto 0);
+            font_row          : in std_logic_vector(2 downto 0);
+            font_col          : in std_logic_vector(2 downto 0);
+            clock             : in std_logic;
+            rom_mux_output    : out std_logic
+        );
+    end component;
+
+	 component char_rom2 is
+        port (
+            character_address : in std_logic_vector(5 downto 0);
+            font_row          : in std_logic_vector(2 downto 0);
+            font_col          : in std_logic_vector(2 downto 0);
+            clock             : in std_logic;
+            rom_mux_output    : out std_logic
+        );
+    end component;
+	 
+	 component char_rom3 is
+        port (
+            character_address : in std_logic_vector(5 downto 0);
+            font_row          : in std_logic_vector(2 downto 0);
+            font_col          : in std_logic_vector(2 downto 0);
+            clock             : in std_logic;
+            rom_mux_output    : out std_logic
+        );
+    end component;
+	 
+    component Text_Gen is
+        port (
+            mode_sel          : in std_logic;
+            pixel_row         : in std_logic_vector(9 downto 0);
+            pixel_column      : in std_logic_vector(9 downto 0);
+            character_address : out std_logic_vector(5 downto 0);
+            font_row          : out std_logic_vector(2 downto 0);
+            font_column       : out std_logic_vector(2 downto 0)
+        );
+    end component;
+	 
+	 component Score_Gen is 
+		  port (
+				score            : in integer;
+				pixel_row        : in std_logic_vector(9 downto 0);
+				pixel_column     : in std_logic_vector(9 downto 0);
+				character_address: out std_logic_vector(5 downto 0);
+				font_row         : out std_logic_vector(2 downto 0);
+				font_column      : out std_logic_vector(2 downto 0)
+		  );
+	 end component;
+	 
+	 component Background_Gen is
+		 port (
+			  clock_25Mhz  : in std_logic;
+			  pixel_row    : in  std_logic_vector(9 downto 0);
+			  pixel_column : in  std_logic_vector(9 downto 0);
+			  red_o    : out std_logic_vector(3 downto 0);
+			  green_o  : out std_logic_vector(3 downto 0);
+			  blue_o   : out std_logic_vector(3 downto 0)
+		 );
+	 end component;
+	 
+	 component Player is
+		 port (
+			  clock_60hz   : in  std_logic;
+			  left_button  : in  std_logic;
+			  key0         : in  std_logic;
+			  pixel_row    : in std_logic_vector(9 downto 0);
+			  pixel_column : in std_logic_vector(9 downto 0);
+			  player_pos   : out bird_pos_type;
+			  Player_on    : out std_logic
+		 );     
+	 end component;
+	 
+	 component Collision_detetct is
+		 port (
+			  clock_60hz     : in  std_logic;
+			  bird_pos       : in  bird_pos_type;  
+			  pipe_posns     : in  pipe_pos_arr_type;
+			  collision      : out collision_type    
+		 );
+	end component;
+	
+	component Life_Gen is
+		 port (
+			  pixel_row     : in std_logic_vector(9 downto 0);
+			  pixel_column  : in std_logic_vector(9 downto 0);
+			  life_count    : in integer range 0 to 3;
+			  character_address : out std_logic_vector(5 downto 0);
+			  font_row          : out std_logic_vector(2 downto 0);
+			  font_column       : out std_logic_vector(2 downto 0)
+		 );
+	end component;
+	
+	begin
+
+    -- Instance of the Pipe Generator
+    pipe_display_inst : Pipe_Gen
+        port map (
+            state        => state,
+            clock_60hz   => clock_60hz,
+            rand_num     => rand_num,
+            pixel_row    => pixel_row,
+            pixel_column => pixel_column,
+            move_pixel   => move_speed_in, -- Connected to the input from Game_Control
+            pipe_on      => pipe_on_temp,
+				pipe_pass    => pipe_passed, 
+				pipe_pos     => pipe_pos
+        );
+
+    -- Instance of the Title Text Generator
+    Title_Char_Gen : Text_Gen
+        port map (
+            mode_sel          => mode_sel_temp,
+            pixel_row         => pixel_row,
+            pixel_column      => pixel_column,
+            character_address => character_address,
+            font_row          => font_row,
+            font_column       => font_column
+        );
+
+    -- Instance of the Character ROM
+    Character_ROM : char_rom
+        port map (
+            character_address => character_address,
+            font_row          => font_row,
+            font_col          => font_column,
+            clock             => clock_25Mhz,
+            rom_mux_output    => rom_mux_output
+        );
+		  
+	 	 Background_genrator : Background_Gen
+		 port map (
+			  clock_25Mhz  => clock_25Mhz, 
+			  pixel_row    => pixel_row,
+			  pixel_column => pixel_column, 
+			  red_o    => background_r,
+			  green_o  => background_g,
+			  blue_o   => background_b
+		 );
+		  
+	  Character_ROM2 : char_rom2
+        port map (
+            character_address => character_address2,
+            font_row          => font_row2,
+            font_col          => font_column2,
+            clock             => clock_25Mhz,
+            rom_mux_output    => rom_mux_output2
+        );
+		  
+		  
+		Character_ROM3 : char_rom3
+        port map (
+            character_address => character_address3,
+            font_row          => font_row3,
+            font_col          => font_column3,
+            clock             => clock_25Mhz,
+            rom_mux_output    => rom_mux_output3
+        );
+		  
+	 Score_Generator : Score_Gen
+		 port map (
+				score            => score, 
+				pixel_row        => pixel_row, 
+				pixel_column     => pixel_column, 
+				character_address=> character_address2, 
+				font_row         => font_row2, 
+				font_column      => font_column2
+		 );
+		 
+	 Player_beh : Player
+		 port map (
+			  clock_60hz   => clock_60hz, 
+			  left_button  => left_button, 
+			  key0         => key0, 
+			  pixel_row    => pixel_row,
+			  pixel_column => pixel_column,
+			  player_pos   => player_pos, 
+			  Player_on    => player_on
+		 ); 
+
+		 
+		Collision : Collision_detetct
+			port map (
+				clock_60hz   => clock_60hz, 
+				bird_pos     => player_pos,
+				pipe_posns   => pipe_pos, 
+				collision    => collision_type 
+		);
+		
+		Lift_Generator : Life_Gen
+			 port map(
+				  pixel_row     => pixel_row, 
+				  pixel_column  => pixel_column, 
+				  life_count    => life_count, 
+				  character_address=> character_address3, 
+				  font_row         => font_row3, 
+			     font_column      => font_column3
+			 );
+		
+		 
+    -- Rendering Process for VGA output based on state
+    rendering: process (clock_25Mhz)
+    begin
+        if rising_edge(clock_25Mhz) then
+            mode_sel_temp <= mode_sel;
+				
+            if (state = title) then
+					if (rom_mux_output = '1') then
+                -- Display text (e.g., title screen)
+                red_en   <= rom_mux_output;
+                green_en <= rom_mux_output;
+                blue_en  <= rom_mux_output;
+                current_pixel <= "111111111111";
+					 else
+					 	 red_en   <= '1';
+						 green_en <= '1';
+						 blue_en  <= '1';
+						 current_pixel <= background_r & background_g & background_b;
+					 end if;
+					 
+            elsif (state = game) then
+                -- Display pipes
+					 if (rom_mux_output2 = '1') then
+						 red_en   <= rom_mux_output2;
+						 green_en <= rom_mux_output2;
+						 blue_en  <= rom_mux_output2;
+						 current_pixel <= "100011001111";  -- Yellow color for pipes
+						 
+					 elsif (rom_mux_output3 = '1') then
+						 red_en   <= rom_mux_output3;
+						 green_en <= rom_mux_output3;
+						 blue_en  <= rom_mux_output3;
+						 current_pixel <= "100011001111";  -- Yellow color for pipes
+					 elsif (pipe_on_temp = '1') then
+						 red_en   <= pipe_on_temp;
+						 green_en <= pipe_on_temp;
+						 blue_en  <= pipe_on_temp;
+						 current_pixel <= "111111001100";  -- pink color for pipe
+						 
+					 elsif (player_on = '1') then
+						 red_en   <= '1';
+						 green_en <= '1';
+						 blue_en  <= '1';
+						 current_pixel <= "111100000000";
+						 
+					else
+						 red_en   <= '1';
+						 green_en <= '1';
+						 blue_en  <= '1';
+						 current_pixel <= background_r & background_g & background_b;
+					
+					end if;
+				
+				--game over stage
+				elsif (state = gameover) then
+					 red_en   <= '0';
+					 green_en <= '0';
+					 blue_en  <= '0';
+					 current_pixel <= "000000000000";
+            end if;
+        end if;
+    end process;
+
+    -- Assign final RGB values based on enable signals
+    VGA_R <= current_pixel(11 downto 8) when red_en = '1' else "0000";
+    VGA_G <= current_pixel(7 downto 4)  when green_en = '1' else "0000";
+    VGA_B <= current_pixel(3 downto 0)  when blue_en = '1' else "0000";
+
+end architecture;

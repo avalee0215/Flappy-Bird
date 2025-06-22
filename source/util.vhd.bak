@@ -1,0 +1,10 @@
+use work.image_pkg.all;
+
+package util is 
+	
+   type game_state is (
+      TITLE, GAME, GAMEOVER
+    );
+	 
+	 
+end package;
